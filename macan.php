@@ -6,34 +6,42 @@
  * Version:     1.0
  */
 
-function form_styles() {
+function form_styles()
+{
     wp_enqueue_style('form-styles', plugin_dir_url(__FILE__) . 'assets/style.css');
 }
 add_action('wp_enqueue_scripts', 'form_styles');
 
-function form_scripts() {
+function form_scripts()
+{
     wp_enqueue_script('form-scripts', plugin_dir_url(__FILE__) . 'assets/custom.js', array('jquery'), '', true);
 }
 add_action('wp_enqueue_scripts', 'form_scripts');
 
 
-register_activation_hook( __FILE__, 'macan_activate' );
+register_activation_hook(__FILE__, 'macan_activate');
 
-function macan_activate(){
-    // Делаем что-то при активации плагина
-    // Например, создаем запись в базе данных для настроек плагина
+function macan_activate()
+{
+
     add_option('macan_api_key', '');
     add_option('macan_email_recipient', '');
+
+    // Редирект на страницу настроек после активации
+    wp_redirect(admin_url('admin.php?page=macan-plugin-settings'));
+    exit;
 }
 
 // Добавляем страницу настроек в меню администратора
 add_action('admin_menu', 'macan_plugin_menu');
 
-function macan_plugin_menu() {
+function macan_plugin_menu()
+{
     add_menu_page('Настройки плагина Macan', 'Настройки плагина Macan', 'manage_options', 'macan-plugin-settings', 'macan_plugin_settings_page');
 }
 
-function macan_plugin_settings_page() {
+function macan_plugin_settings_page()
+{
     ?>
     <div class="wrap">
         <h2>Настройки плагина</h2>
@@ -42,18 +50,18 @@ function macan_plugin_settings_page() {
             <?php do_settings_sections('macan-plugin-settings'); ?>
             <?php submit_button(); ?>
         </form>
-		<?php 
-		// Получаем путь к файлу лога
-    $log_file = plugin_dir_path(__FILE__) . 'log.txt';
+        <?php
+        // Получаем путь к файлу лога
+        $log_file = plugin_dir_path(__FILE__) . 'log.txt';
 
-    // Выводим ссылку на лог-файл, если он существует
-    if (file_exists($log_file)) {
-		        $log_url = home_url('/wp-content/plugins/macan1/log.txt');
+        // Выводим ссылку на лог-файл, если он существует
+        if (file_exists($log_file)) {
+            $log_url = home_url('/wp-content/plugins/macan1/log.txt');
 
-		              echo '<p><a href="' . esc_url($log_url) . '" target="_blank">Ссылка на лог-файл</a></p>';
+            echo '<p><a href="' . esc_url($log_url) . '" target="_blank">Ссылка на лог-файл</a></p>';
 
-	}
-		?>
+        }
+        ?>
     </div>
     <?php
 }
@@ -61,7 +69,8 @@ function macan_plugin_settings_page() {
 // Добавляем поля настроек
 add_action('admin_init', 'macan_plugin_settings');
 
-function macan_plugin_settings() {
+function macan_plugin_settings()
+{
     register_setting('macan_plugin_settings_group', 'macan_api_key');
     register_setting('macan_plugin_settings_group', 'macan_email_recipient');
 
@@ -71,21 +80,25 @@ function macan_plugin_settings() {
     add_settings_field('macan_email_recipient', 'Получатель письма:', 'macan_email_recipient_callback', 'macan-plugin-settings', 'macan_plugin_settings_section');
 }
 
-function macan_plugin_section_text() {
+function macan_plugin_section_text()
+{
     echo '<p>Укажите настройки API и адрес приложения</p>';
 }
 
-function macan_api_key_callback() {
+function macan_api_key_callback()
+{
     echo '<input type="text" name="macan_api_key" value="' . esc_attr(get_option('macan_api_key')) . '" />';
 }
 
-function macan_email_recipient_callback() {
+function macan_email_recipient_callback()
+{
     echo '<input type="text" name="macan_email_recipient" value="' . esc_attr(get_option('macan_email_recipient')) . '" />';
 }
 
 
 
-function form_shortcode_function() {
+function form_shortcode_function()
+{
     // Здесь разместите код, который будет обрабатывать ваш шорткод
     // Например, вывод формы
     $form_html = '<form id="macanForm" method="post">
@@ -129,7 +142,7 @@ function form_shortcode_function() {
                                 var formData = $(this).serialize();
                     $.ajax({
                         type: "POST",
-                        url: "'.admin_url('admin-ajax.php').'",
+                        url: "' . admin_url('admin-ajax.php') . '",
                         data: "action=process_macan_form&" + formData,
                         success:function(data){
                             $("#formResult").html(data);
@@ -174,9 +187,10 @@ function form_shortcode_function() {
 }
 add_shortcode('macan', 'form_shortcode_function');
 
-function process_macan_form() {
+function process_macan_form()
+{
 
-// Проверяем, были ли переданы данные из формы
+    // Проверяем, были ли переданы данные из формы
     if (isset($_POST['first_name'], $_POST['last_name'], $_POST['email'], $_POST['subject'], $_POST['message'])) {
         // Получаем данные из формы
         $first_name = sanitize_text_field($_POST['first_name']);
@@ -201,8 +215,8 @@ function process_macan_form() {
         // Проверяем успешность отправки
         if ($mail_result) {
             echo 'Message sent successfully!';
-			
-			            // Логирование в файл
+
+            // Логирование в файл
             $log_file = plugin_dir_path(__FILE__) . 'log.txt';
             $log_entry = date('Y-m-d H:i:s') . " | Email: $email | IP: " . $_SERVER['REMOTE_ADDR'] . "\n";
 
@@ -213,7 +227,7 @@ function process_macan_form() {
                 // Создаем новый файл лога
                 file_put_contents($log_file, $log_entry);
             }
-			// Создание контакта в HubSpot
+            // Создание контакта в HubSpot
             send_data_to_hubspot($first_name, $email);
         } else {
             echo 'Error sending message.';
@@ -224,7 +238,8 @@ function process_macan_form() {
     wp_die();
 }
 
-function send_data_to_hubspot($name, $email) {
+function send_data_to_hubspot($name, $email)
+{
     $hubspot_api_key = get_option('macan_api_key');
     $hubspot_api_url = 'https://api.hubapi.com/crm/v3/objects/contacts';
 
